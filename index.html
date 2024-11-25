@@ -14,16 +14,12 @@
         <h1>Workstation Scheduling</h1>
         <!-- Date display -->
         <p id="currentDate"></p>
-        <!-- Navigation Buttons -->
-        <nav class="nav-buttons">
-            <div class="nav-group">
-                <button type="button" id="rotateAllBtn" aria-label="Rotate All Assignments">Rotate Assignments</button>
-                <button type="button" id="prioritizeNewStationBtn" aria-label="Prioritize New Station Assignments">Prioritize New Station</button>
-            </div>
-            <div class="nav-group">
-                <button type="button" id="exportScheduleBtn" aria-label="Export and Save Schedule">Export &amp; Save Schedule</button>
-                <button type="button" id="saveChangesBtn" aria-label="Save Changes">Save Changes</button>
-            </div>
+        <!-- Navigation buttons -->
+        <nav>
+            <button type="button" id="rotateAllBtn">Rotate Assignments</button>
+            <button type="button" id="prioritizeNewStationBtn">Prioritize New Station</button>
+            <button type="button" id="exportScheduleBtn">Export &amp; Save Schedule</button>
+            <button type="button" id="saveChangesBtn">Save Changes</button>
         </nav>
     </header>
     <!-- Main content area -->
@@ -35,50 +31,18 @@
             </table>
         </section>
 
-        <!-- Unassigned Team Members Section -->
-        <section id="unassignedTeamMembers">
-            <h2>Unassigned Team Members</h2>
-            <div class="unassigned-container">
-                <!-- Quarters and team members will be displayed here -->
-                <div class="quarter-column">
-                    <h3>Quarter 1</h3>
-                    <ul id="unassignedQuarter1" class="unassigned-list">
-                        <!-- Team members for Quarter 1 -->
-                    </ul>
-                </div>
-                <div class="quarter-column">
-                    <h3>Quarter 2</h3>
-                    <ul id="unassignedQuarter2" class="unassigned-list">
-                        <!-- Team members for Quarter 2 -->
-                    </ul>
-                </div>
-                <div class="quarter-column">
-                    <h3>Quarter 3</h3>
-                    <ul id="unassignedQuarter3" class="unassigned-list">
-                        <!-- Team members for Quarter 3 -->
-                    </ul>
-                </div>
-                <div class="quarter-column">
-                    <h3>Quarter 4</h3>
-                    <ul id="unassignedQuarter4" class="unassigned-list">
-                        <!-- Team members for Quarter 4 -->
-                    </ul>
-                </div>
-                <div class="quarter-column">
-                    <h3>Quarter 5</h3>
-                    <ul id="unassignedQuarter5" class="unassigned-list">
-                        <!-- Team members for Quarter 5 -->
-                    </ul>
-                </div>
-            </div>
-        </section>
-
         <!-- Team Member Pool Section -->
         <section id="teamMemberPoolSection">
             <h2>Team Member Pool</h2>
-            <div id="teamMemberPool" class="pool" aria-label="Team Member Pool">
+            <div id="teamMemberPool" class="pool" ondrop="dropToPool(event)" ondragover="allowDrop(event)">
                 <!-- Team members not assigned will appear here -->
             </div>
+        </section>
+
+        <!-- Unassigned Team Members Section -->
+        <section id="unassignedTeamMembers">
+            <h3>Unassigned Team Members</h3>
+            <div id="unassignedContent">All team members are assigned in all quarters.</div>
         </section>
 
         <!-- Constraints Section -->
@@ -100,8 +64,8 @@
                     <option value="noSameStationTwice">Team member cannot be assigned to the same station twice</option>
                     <option value="noSequencingKitsBackToBack">Team member cannot work on Sequencing A, Sequencing B, or Kits 1 back to back</option>
                 </select>
-                <input type="text" id="constraintDescriptionInput" placeholder="Constraint Description" aria-label="Constraint Description" />
-                <button type="button" id="addConstraintBtn" aria-label="Add Constraint">Add Constraint</button>
+                <input type="text" id="constraintDescriptionInput" placeholder="Constraint Description" />
+                <button type="button" id="addConstraintBtn">Add Constraint</button>
             </div>
         </section>
 
@@ -109,9 +73,9 @@
         <section id="teamMemberSkills">
             <h2>Team Member Skills</h2>
             <!-- New team member addition form -->
-            <div class="add-team-member">
-                <input type="text" id="newTeamMemberName" placeholder="Enter new team member name" aria-label="New Team Member Name" />
-                <button type="button" id="addTeamMemberBtn" aria-label="Add Team Member">Add Team Member</button>
+            <div>
+                <input type="text" id="newTeamMemberName" placeholder="Enter new team member name" />
+                <button type="button" id="addTeamMemberBtn">Add Team Member</button>
             </div>
             <table id="skillsTable">
                 <!-- Skills table will be generated here -->
@@ -126,28 +90,25 @@
                 <canvas id="snapshotChart"></canvas>
                 <!-- Chart Buttons -->
                 <div class="chart-buttons">
-                    <button id="snapshotHideAllBtn" aria-label="Hide All Team Members in Snapshot Chart">Hide All Team Members</button>
-                    <button id="snapshotShowAllBtn" aria-label="Show All Team Members in Snapshot Chart">Show All Team Members</button>
+                    <button id="snapshotHideAllBtn">Hide All Team Members</button>
+                    <button id="snapshotShowAllBtn">Show All Team Members</button>
                 </div>
             </div>
             <!-- Weekly Stations Graph -->
             <div class="chart-section">
                 <h3>Weekly Stations Overview</h3>
                 <canvas id="weeklyChart"></canvas>
-                <!-- Dates Display -->
+                <!-- New code: Dates Display -->
                 <div id="weeklyDates"></div>
                 <!-- Chart Buttons -->
                 <div class="chart-buttons">
-                    <button id="weeklyHideAllBtn" aria-label="Hide All Team Members in Weekly Chart">Hide All Team Members</button>
-                    <button id="weeklyShowAllBtn" aria-label="Show All Team Members in Weekly Chart">Show All Team Members</button>
-                    <button id="resetWeekBtn" aria-label="Reset Weekly Data">Reset Week</button>
+                    <button id="weeklyHideAllBtn">Hide All Team Members</button>
+                    <button id="weeklyShowAllBtn">Show All Team Members</button>
+                    <button id="resetWeekBtn">Reset Week</button>
                 </div>
             </div>
         </section>
     </main>
-
-    <!-- Error and Confirmation Message Display -->
-    <div id="messageBox" class="message-box" style="display: none;" role="alert"></div>
 
     <!-- Include Chart.js Library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
