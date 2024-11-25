@@ -1,5 +1,4 @@
 // JavaScript code
-
 // Data Structures
 
 // Updated workstations array with the new order
@@ -29,17 +28,7 @@ function initSchedule() {
         });
     });
     // Clear unassigned team members box
-    clearUnassignedLists();
-}
-
-// Function to clear unassigned team members lists
-function clearUnassignedLists() {
-    quarters.forEach(q => {
-        const list = document.getElementById(`unassigned${q.replace(' ', '')}`);
-        if (list) {
-            list.innerHTML = "";
-        }
-    });
+    document.getElementById("unassignedContent").innerHTML = "All team members are assigned in all quarters.";
 }
 
 // Function to get default team members
@@ -130,7 +119,7 @@ function loadData() {
 function saveData() {
     localStorage.setItem("teamMembers", JSON.stringify(teamMembers));
     localStorage.setItem("constraints", JSON.stringify(constraints));
-    showConfirmation("Changes saved successfully!");
+    alert("Changes saved successfully!");
 }
 
 // Generate Constraints List
@@ -163,8 +152,6 @@ function generateConstraintsList() {
 
         const deleteBtn = document.createElement("button");
         deleteBtn.textContent = "Delete";
-        deleteBtn.classList.add("delete-constraint-btn");
-        deleteBtn.setAttribute("aria-label", `Delete constraint: ${constraint.description}`);
         deleteBtn.addEventListener("click", () => {
             deleteConstraint(constraint.id);
         });
@@ -192,13 +179,13 @@ function addConstraint() {
     const description = constraintDescriptionInput.value.trim();
 
     if (description === "") {
-        showError("Please enter a description for the new constraint.");
+        alert("Please enter a description for the new constraint.");
         return;
     }
 
     // Check if constraint already exists
     if (constraints.some(constraint => constraint.description === description)) {
-        showError("A constraint with this description already exists.");
+        alert("A constraint with this description already exists.");
         return;
     }
 
@@ -216,8 +203,6 @@ function addConstraint() {
     // Regenerate constraints list
     generateConstraintsList();
     saveData(); // Save changes
-
-    showConfirmation("Constraint added successfully!");
 }
 
 // Generate Schedule Table
@@ -228,7 +213,7 @@ function generateScheduleTable() {
     // Header Row
     let headerRow = "<tr><th>Workstations</th>";
     quarters.forEach(q => {
-        headerRow += `<th>${q} <button onclick="rotateQuarter('${q}')" aria-label="Rotate ${q} Assignments">Rotate</button></th>`;
+        headerRow += `<th>${q} <button onclick="rotateQuarter('${q}')">Rotate</button></th>`;
     });
     headerRow += "</tr>";
     table.innerHTML += headerRow;
@@ -243,24 +228,21 @@ function generateScheduleTable() {
                 // Check if team member is active and available in this quarter
                 let tm = teamMembers.find(tm => tm.name === name);
                 if (tm && tm.active && !tm.unavailableQuarters.includes(q)) {
-                    return `<div class="draggable ${lockState}" draggable="true" ondragstart="drag(event)" onclick="toggleLockState(event, '${name}', '${q}', '${ws}')" aria-label="${name} assigned to ${ws}">${name}</div>`;
+                    return `<div class="draggable ${lockState}" draggable="true" ondragstart="drag(event)" onclick="toggleLockState(event, '${name}', '${q}', '${ws}')">${name}</div>`;
                 } else {
                     return '';
                 }
             }).join('');
 
-            row += `<td data-label="${q}" class="droppable" data-quarter="${q}" data-workstation="${ws}" aria-label="Drop zone for ${ws} in ${q}" ondragover="allowDrop(event)" ondrop="drop(event)">
+            row += `<td class="droppable" ondrop="drop(event)" ondragover="allowDrop(event)" data-quarter="${q}" data-workstation="${ws}">
                 ${cellContent}
             </td>`;
         });
         row += "</tr>";
         table.innerHTML += row;
     });
-
     // Update team member pool after generating schedule
     generateTeamMemberPool();
-    // Update unassigned team members lists
-    updateUnassignedTeamMembers();
 }
 
 // Toggle Lock State
@@ -283,13 +265,12 @@ function toggleLockState(event, name, quarter, workstation) {
 function generateTeamMemberPool() {
     const pool = document.getElementById("teamMemberPool");
     pool.innerHTML = "";
-    // Display all active team members who are not assigned in any quarter
+    // Display all active team members
     teamMembers.forEach(tm => {
-        if (tm.active && !isTeamMemberAssigned(tm.name)) {
+        if (tm.active) {
             let div = document.createElement("div");
             div.classList.add("draggable");
             div.setAttribute("draggable", "true");
-            div.setAttribute("aria-label", `Drag ${tm.name} to assign`);
             div.addEventListener("dragstart", dragFromPool);
             div.textContent = tm.name;
             pool.appendChild(div);
@@ -297,48 +278,62 @@ function generateTeamMemberPool() {
     });
 }
 
-// Check if Team Member is Assigned in Any Quarter
-function isTeamMemberAssigned(name) {
-    for (let q of quarters) {
-        for (let ws of workstations) {
-            if (schedule[q][ws].some(a => a.name === name)) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
+// Generate Skills Table
+function generateSkillsTable() {
+    const table = document.getElementById("skillsTable");
+    table.innerHTML = "";
 
-// Update Unassigned Team Members Lists
-function updateUnassignedTeamMembers() {
-    // Clear existing lists
-    clearUnassignedLists();
+    // Header Row
+    let headerRow = "<tr><th>Team Member</th>";
+    workstations.forEach(ws => {
+        headerRow += `<th>${ws}</th>`;
+    });
+    headerRow += "</tr>";
+    table.innerHTML += headerRow;
 
-    // Organize unassigned team members by quarter
-    quarters.forEach(q => {
-        const list = document.getElementById(`unassigned${q.replace(' ', '')}`);
-        teamMembers.forEach(tm => {
-            if (tm.active && !tm.unavailableQuarters.includes(q) && !isTeamMemberAssignedInQuarter(tm.name, q)) {
-                let li = document.createElement("li");
-                li.classList.add("draggable");
-                li.setAttribute("draggable", "true");
-                li.setAttribute("aria-label", `Drag ${tm.name} to assign to ${q}`);
-                li.addEventListener("dragstart", dragFromPool);
-                li.textContent = tm.name;
-                list.appendChild(li);
-            }
+    // Data Rows
+    teamMembers.forEach(tm => {
+        let row = `<tr>`;
+        // Team member name with quarter availability dots
+        row += `<td>`;
+        // Team member name clickable to toggle overall active status
+        row += `<div><span onclick="toggleTeamMemberActive('${tm.name}', this)" class="${tm.active ? '' : 'inactive'}">${tm.name}</span></div>`;
+        // Quarter availability dots
+        row += `<div class="dot-container">`;
+        quarters.forEach(q => {
+            let isActive = !tm.unavailableQuarters.includes(q);
+            row += `<span class="quarter-dot ${isActive ? 'active' : 'inactive'}" onclick="toggleQuarterAvailability('${tm.name}', '${q}', this)" title="${q}"></span>`;
         });
+        row += `</div>`;
+        row += `</td>`;
+
+        workstations.forEach(ws => {
+            let canDo = tm.stations.includes(ws);
+            let partialCanDo = tm.partialStations.includes(ws);
+            row += `<td>
+                <span class="dot ${canDo ? 'black-dot' : 'white-dot'}" onclick="toggleSkill('${tm.name}', '${ws}', this)" title="Full Skill"></span>
+                <span class="dot ${partialCanDo ? 'yellow-dot' : 'white-dot'}" onclick="togglePartialSkill('${tm.name}', '${ws}', this)" title="Partial Skill"></span>
+            </td>`;
+        });
+        row += "</tr>";
+        table.innerHTML += row;
     });
 }
 
-// Check if Team Member is Assigned in a Specific Quarter
-function isTeamMemberAssignedInQuarter(name, quarter) {
-    for (let ws of workstations) {
-        if (schedule[quarter][ws].some(a => a.name === name)) {
-            return true;
-        }
+// Toggle Quarter Availability
+function toggleQuarterAvailability(name, quarter, element) {
+    let tm = teamMembers.find(tm => tm.name === name);
+    if (tm.unavailableQuarters.includes(quarter)) {
+        tm.unavailableQuarters = tm.unavailableQuarters.filter(q => q !== quarter);
+        element.classList.remove('inactive');
+        element.classList.add('active');
+    } else {
+        tm.unavailableQuarters.push(quarter);
+        element.classList.remove('active');
+        element.classList.add('inactive');
     }
-    return false;
+    generateScheduleTable();
+    updateUnassignedBox();
 }
 
 // Drag and Drop Functions
@@ -375,7 +370,7 @@ function drop(ev) {
     // Check if team member is active and available in this quarter
     let tm = teamMembers.find(tm => tm.name === name);
     if (!tm || !tm.active || tm.unavailableQuarters.includes(targetQuarter)) {
-        showError(`${name} is not available in ${targetQuarter}.`);
+        alert(`${name} is not available in ${targetQuarter}.`);
         return;
     }
 
@@ -391,7 +386,7 @@ function drop(ev) {
         }
 
         // Remove from source workstation
-        if (sourceQuarter && sourceWorkstation && schedule[sourceQuarter] && schedule[sourceQuarter][sourceWorkstation]) {
+        if (sourceWorkstation && schedule[sourceQuarter] && schedule[sourceQuarter][sourceWorkstation]) {
             schedule[sourceQuarter][sourceWorkstation] = schedule[sourceQuarter][sourceWorkstation].filter(a => a.name !== name);
         }
 
@@ -401,8 +396,7 @@ function drop(ev) {
         }
 
         generateScheduleTable();
-        generateTeamMemberPool();
-        updateUnassignedTeamMembers();
+        updateUnassignedBox();
         return;
     }
 
@@ -416,7 +410,7 @@ function drop(ev) {
         }
     });
     if (alreadyAssigned) {
-        showError(`${name} is already assigned in ${targetQuarter}.`);
+        alert(`${name} is already assigned in ${targetQuarter}.`);
         return;
     }
 
@@ -433,11 +427,9 @@ function drop(ev) {
     }
 
     generateScheduleTable();
-    generateTeamMemberPool();
-    updateUnassignedTeamMembers();
+    updateUnassignedBox();
 }
 
-// Drop to Pool Function (Optional if you have a designated pool drop area)
 function dropToPool(ev) {
     ev.preventDefault();
     let name = ev.dataTransfer.getData("text");
@@ -455,8 +447,7 @@ function dropToPool(ev) {
     }
 
     generateScheduleTable();
-    generateTeamMemberPool();
-    updateUnassignedTeamMembers();
+    updateUnassignedBox();
 }
 
 // Rotate Assignments with Constraints and Lock States
@@ -504,12 +495,11 @@ function rotateAssignments() {
     // Start recursive assignment
     if (assignWorkstations(0, teamMemberAssignments)) {
         generateScheduleTable();
-        generateTeamMemberPool();
-        updateUnassignedTeamMembers();
+        updateUnassignedBox();
         // Update charts
         renderSnapshotChart(schedule);
     } else {
-        showError("No valid schedule could be generated with the current constraints.");
+        alert("No valid schedule could be generated with the current constraints.");
     }
 }
 
@@ -544,6 +534,8 @@ function rotateQuarter(q) {
                     if (wsIsBackboards(ws)) {
                         teamMemberAssignments[name].backboardsAssigned = true;
                     }
+                    // Add workstation to assignedWorkstations for same station constraint
+                    teamMemberAssignments[name].assignedWorkstations.push(ws);
                 }
             });
         });
@@ -557,12 +549,11 @@ function rotateQuarter(q) {
     // Start recursive assignment for this quarter
     if (assignWorkstationsForQuarter(0, quarterIndex, teamMemberAssignments)) {
         generateScheduleTable();
-        generateTeamMemberPool();
-        updateUnassignedTeamMembers();
+        updateUnassignedBox();
         // Update charts
         renderSnapshotChart(schedule);
     } else {
-        showError(`No valid schedule could be generated for ${q} with the current constraints.`);
+        alert(`No valid schedule could be generated for ${q} with the current constraints.`);
     }
 }
 
@@ -848,10 +839,6 @@ function toggleSkill(name, ws, element) {
             sibling.classList.add('white-dot');
         }
     }
-
-    generateScheduleTable();
-    generateTeamMemberPool();
-    updateUnassignedTeamMembers();
 }
 
 // Toggle Partial Skill (Yellow Dot)
@@ -875,10 +862,6 @@ function togglePartialSkill(name, ws, element) {
             sibling.classList.add('white-dot');
         }
     }
-
-    generateScheduleTable();
-    generateTeamMemberPool();
-    updateUnassignedTeamMembers();
 }
 
 // Toggle Team Member Active Status
@@ -892,8 +875,8 @@ function toggleTeamMemberActive(name, element) {
     }
     // Regenerate the schedule to reflect changes
     generateScheduleTable();
-    generateTeamMemberPool();
-    updateUnassignedTeamMembers();
+    updateUnassignedBox();
+    generateSkillsTable();
 }
 
 // Add New Team Member
@@ -901,13 +884,13 @@ function addTeamMember() {
     let nameInput = document.getElementById("newTeamMemberName");
     let name = nameInput.value.trim();
     if (name === "") {
-        showError("Please enter a valid team member name.");
+        alert("Please enter a valid team member name.");
         return;
     }
 
     // Check if team member already exists
     if (teamMembers.some(tm => tm.name === name)) {
-        showError("A team member with this name already exists.");
+        alert("A team member with this name already exists.");
         return;
     }
 
@@ -927,79 +910,76 @@ function addTeamMember() {
     generateSkillsTable();
     // Update team member pool
     generateTeamMemberPool();
-    // Update unassigned team members lists
-    updateUnassignedTeamMembers();
-
-    showConfirmation("Team member added successfully!");
 }
 
-// Function to generate skills table
-function generateSkillsTable() {
-    const table = document.getElementById("skillsTable");
-    table.innerHTML = "";
-
-    // Header Row
-    let headerRow = "<tr><th>Team Member</th>";
-    workstations.forEach(ws => {
-        headerRow += `<th>${ws}</th>`;
-    });
-    headerRow += "</tr>";
-    table.innerHTML += headerRow;
-
-    // Data Rows
-    teamMembers.forEach(tm => {
-        let row = `<tr><td>${tm.name}</td>`;
-        workstations.forEach(ws => {
-            let hasFullSkill = tm.stations.includes(ws);
-            let hasPartialSkill = tm.partialStations.includes(ws);
-            let activeClass = tm.active ? "" : "inactive";
-
-            row += `<td>
-                <div class="dot ${hasFullSkill ? 'black-dot' : 'white-dot'}" onclick="toggleSkill('${tm.name}', '${ws}', this)" aria-label="Toggle full skill for ${tm.name} on ${ws}"></div>
-                <div class="dot ${hasPartialSkill ? 'yellow-dot' : 'white-dot'}" onclick="togglePartialSkill('${tm.name}', '${ws}', this)" aria-label="Toggle partial skill for ${tm.name} on ${ws}"></div>
-            </td>`;
-        });
-        row += "</tr>";
-        table.innerHTML += row;
-    });
-}
-
-// Function to show Unassigned Team Members
-function updateUnassignedTeamMembers() {
-    clearUnassignedLists();
-
-    quarters.forEach(q => {
-        const list = document.getElementById(`unassigned${q.replace(' ', '')}`);
+// Function to Show Unassigned Team Members
+function showUnassignedTeamMembers(teamMemberAssignments) {
+    // Organize unassigned team members by quarter
+    let unassignedByQuarter = {};
+    quarters.forEach((quarter, qIdx) => {
+        unassignedByQuarter[quarter] = [];
         teamMembers.forEach(tm => {
-            if (tm.active && !tm.unavailableQuarters.includes(q) && !isTeamMemberAssignedInQuarter(tm.name, q)) {
-                let li = document.createElement("li");
-                li.classList.add("draggable");
-                li.setAttribute("draggable", "true");
-                li.setAttribute("aria-label", `Drag ${tm.name} to assign to ${q}`);
-                li.addEventListener("dragstart", dragFromPool);
-                li.textContent = tm.name;
-                list.appendChild(li);
+            if (!tm.active) return;
+            if (tm.unavailableQuarters.includes(quarter)) {
+                unassignedByQuarter[quarter].push(`${tm.name} (Unavailable)`);
+            } else if (!teamMemberAssignments[tm.name].assignments[qIdx]) {
+                unassignedByQuarter[quarter].push(tm.name);
             }
         });
     });
+
+    // Prepare content
+    let contentDiv = document.getElementById("unassignedContent");
+    contentDiv.innerHTML = ""; // Clear previous content
+
+    let hasUnassigned = false;
+    quarters.forEach(quarter => {
+        if (unassignedByQuarter[quarter].length > 0) {
+            hasUnassigned = true;
+            let quarterHeading = document.createElement("h4");
+            quarterHeading.textContent = quarter;
+            contentDiv.appendChild(quarterHeading);
+
+            let ul = document.createElement("ul");
+            ul.classList.add("unassigned-list");
+            unassignedByQuarter[quarter].forEach(name => {
+                let li = document.createElement("li");
+                li.textContent = name;
+                ul.appendChild(li);
+            });
+            contentDiv.appendChild(ul);
+        }
+    });
+
+    if (!hasUnassigned) {
+        contentDiv.innerHTML = "All team members are assigned in all quarters.";
+    }
 }
 
-// Toggle Quarter Availability
-function toggleQuarterAvailability(name, quarter, element) {
-    let tm = teamMembers.find(tm => tm.name === name);
-    if (tm.unavailableQuarters.includes(quarter)) {
-        tm.unavailableQuarters = tm.unavailableQuarters.filter(q => q !== quarter);
-        element.classList.remove('inactive');
-        element.classList.add('active');
-    } else {
-        tm.unavailableQuarters.push(quarter);
-        element.classList.remove('active');
-        element.classList.add('inactive');
+// Function to Update Unassigned Team Members Box after Manual Changes
+function updateUnassignedBox() {
+    let teamMemberAssignments = {};
+    teamMembers.forEach(tm => {
+        teamMemberAssignments[tm.name] = {
+            assignments: Array(quarters.length).fill(null)
+        };
+    });
+
+    for (let qIdx = 0; qIdx < quarters.length; qIdx++) {
+        let quarter = quarters[qIdx];
+        workstations.forEach(ws => {
+            schedule[quarter][ws].forEach(assignment => {
+                teamMemberAssignments[assignment.name].assignments[qIdx] = ws;
+            });
+        });
     }
-    generateScheduleTable();
-    generateTeamMemberPool();
-    updateUnassignedTeamMembers();
+
+    showUnassignedTeamMembers(teamMemberAssignments);
 }
+
+// ===========================
+// Additional JavaScript Functions
+// ===========================
 
 // Function to handle Export & Save Schedule
 function exportAndSaveSchedule() {
@@ -1023,7 +1003,7 @@ function exportAndSaveSchedule() {
     // Update localStorage
     localStorage.setItem("savedRotations", JSON.stringify(savedRotations));
 
-    showConfirmation("Schedule exported and saved successfully!");
+    alert("Schedule exported and saved successfully!");
 
     // Render the latest snapshot chart
     renderSnapshotChart(currentSchedule);
@@ -1071,7 +1051,6 @@ function renderSnapshotChart(currentSchedule) {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false, // Allows the chart to adjust its height
             scales: {
                 x: {
                     stacked: true,
@@ -1177,7 +1156,6 @@ function renderWeeklyChart(savedRotations) {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false, // Allows the chart to adjust its height
             scales: {
                 x: {
                     stacked: true,
@@ -1206,7 +1184,7 @@ function renderWeeklyChart(savedRotations) {
 function resetWeeklyData() {
     // Clear the saved rotations from localStorage
     localStorage.removeItem("savedRotations");
-    showConfirmation("Weekly data has been reset.");
+    alert("Weekly data has been reset.");
     // Re-render the weekly chart with empty data
     renderWeeklyChart([]);
 }
@@ -1234,7 +1212,6 @@ document.getElementById("exportScheduleBtn").addEventListener("click", exportAnd
 
 // Event Listeners
 document.getElementById("rotateAllBtn").addEventListener("click", rotateAssignments);
-document.getElementById("prioritizeNewStationBtn").addEventListener("click", rotateAssignmentsPrioritizeNewStation);
 document.getElementById("addConstraintBtn").addEventListener("click", addConstraint);
 document.getElementById("addTeamMemberBtn").addEventListener("click", addTeamMember);
 document.getElementById("saveChangesBtn").addEventListener("click", saveData);
@@ -1288,7 +1265,7 @@ function getPreviousDaySchedule() {
 function rotateAssignmentsPrioritizeNewStation() {
     let previousSchedule = getPreviousDaySchedule();
     if (!previousSchedule) {
-        showError("No previous schedule found. Please ensure you have saved at least one schedule.");
+        alert("No previous schedule found. Please ensure you have saved at least one schedule.");
         return;
     }
 
@@ -1344,12 +1321,11 @@ function rotateAssignmentsPrioritizeNewStation() {
     // Start recursive assignment with prioritization
     if (assignWorkstationsPrioritizeNewStation(0, teamMemberAssignments)) {
         generateScheduleTable();
-        generateTeamMemberPool();
-        updateUnassignedTeamMembers();
+        updateUnassignedBox();
         // Update charts
         renderSnapshotChart(schedule);
     } else {
-        showError("No valid schedule could be generated with the current constraints and prioritization.");
+        alert("No valid schedule could be generated with the current constraints and prioritization.");
     }
 }
 
@@ -1389,7 +1365,7 @@ function assignWorkstationsPrioritizeNewStation(index, teamMemberAssignments) {
         return !existingAssignments.some(a => a.name === tm.name);
     });
 
-    // Sort candidates to prioritize those who did NOT work on this workstation yesterday
+    // Sort candidates to prioritize those who did not work on this workstation yesterday
     candidates.sort((a, b) => {
         let aWorkedYesterday = teamMemberAssignments[a.name].previousStations.includes(workstation);
         let bWorkedYesterday = teamMemberAssignments[b.name].previousStations.includes(workstation);
@@ -1478,11 +1454,14 @@ function isValidAssignmentPrioritizeNewStation(tm, quarterIndex, workstation, te
     }
 }
 
+// Toggle Quarter Availability
+// (Already defined above)
+
 // Toggle Skill
 // (Already defined above)
 
 // Toggle Partial Skill (Yellow Dot)
-// (Already defined above)
+    // (Already defined above)
 
 // Toggle Team Member Active Status
 // (Already defined above)
@@ -1493,7 +1472,7 @@ function isValidAssignmentPrioritizeNewStation(tm, quarterIndex, workstation, te
 // Function to Show Unassigned Team Members
 // (Already defined above)
 
-// Function to Update Unassigned Team Members Lists
+// Function to Update Unassigned Team Members Box after Manual Changes
 // (Already defined above)
 
 // Function to handle Export & Save Schedule
@@ -1514,40 +1493,17 @@ function isValidAssignmentPrioritizeNewStation(tm, quarterIndex, workstation, te
 // Function to display the current date
 // (Already defined above)
 
-// Function to show error messages
-function showError(message) {
-    const messageBox = document.getElementById('messageBox');
-    messageBox.textContent = message;
-    messageBox.style.backgroundColor = '#f8d7da';
-    messageBox.style.color = varColor('--error-color');
-    messageBox.style.borderColor = varColor('--error-color');
-    messageBox.style.display = 'block';
-    setTimeout(() => {
-        messageBox.style.display = 'none';
-    }, 5000); // Hide after 5 seconds
-}
+// Event Listener for Export & Save Schedule Button
+// (Already defined above)
 
-// Function to show confirmation messages
-function showConfirmation(message) {
-    const messageBox = document.getElementById('messageBox');
-    messageBox.textContent = message;
-    messageBox.style.backgroundColor = '#d4edda';
-    messageBox.style.color = varColor('--success-color');
-    messageBox.style.borderColor = varColor('--success-color');
-    messageBox.style.display = 'block';
-    setTimeout(() => {
-        messageBox.style.display = 'none';
-        // Reset styles after hiding
-        messageBox.style.backgroundColor = '#f8d7da';
-        messageBox.style.color = varColor('--error-color');
-        messageBox.style.borderColor = varColor('--error-color');
-    }, 5000); // Hide after 5 seconds
-}
+// Event Listeners
+// (Already defined above)
 
-// Helper function to get CSS variable value
-function varColor(variable) {
-    return getComputedStyle(document.documentElement).getPropertyValue(variable);
-}
+// Function to toggle all datasets in a chart
+// (Already defined above)
+
+// Functions for Prioritize New Station Feature
+// (Already defined above)
 
 // On Page Load, initialize data and generate the schedule and charts
 window.onload = function() {
@@ -1569,11 +1525,8 @@ window.onload = function() {
     // Generate schedule table
     generateScheduleTable();
 
-    // Generate team member pool
-    generateTeamMemberPool();
-
-    // Update unassigned team members lists
-    updateUnassignedTeamMembers();
+    // Update unassigned team members box
+    updateUnassignedBox();
 
     // Render charts with current schedule
     renderSnapshotChart(schedule);
